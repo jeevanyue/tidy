@@ -155,13 +155,27 @@ getsummary.Date <- function (object, maxsum = 10L, ..., digits = 12L)
 
 getsummary.POSIXct <- function (object, digits = 15L, ...)
 {
-  x <- summary.default(unclass(object), digits = digits, ...)
-  if (m <- match("NA's", names(x), 0)) {
-    NAs <- as.integer(x[m])
-    x <- x[-m]
-    attr(x, "NAs") <- NAs
-  }
-  class(x) <- c("summaryDefault", "table", oldClass(object))
-  attr(x, "tzone") <- attr(object, "tzone")
-  x
+  object_date <- as.Date(object)
+  days <- as.numeric(max(object_date, na.rm = TRUE) - min(object_date, na.rm = TRUE))
+  hst <- hist(object_date, breaks = 'months', plot = FALSE)
+  hst$breaks <- as.Date(hst$breaks, origin = '1970-01-01')
+  hst$mids <- as.Date(hst$mids, origin = '1970-01-01')
+
+  h <- list()
+  h <- lapply(seq(1, length(hst$breaks) - 1), function(x) {
+    h[x] <- paste0(hst$breaks[x], "-", hst$breaks[x + 1])
+  })
+  names(hst$counts) <- h
+
+  hst$counts <- hst$counts[hst$counts != 0]
+
+
+  sumry <- summary.POSIXct(object, digits = digits, ...)
+  class(sumry) <- 'POSIXct'
+
+  list(
+    class = "POSIXct",
+    hist = hst$counts,
+    summary = sumry
+  )
 }
